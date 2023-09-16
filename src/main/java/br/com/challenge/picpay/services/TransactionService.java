@@ -29,28 +29,39 @@ public class TransactionService {
         User sender = userService.findUserById(transaction.senderId());
         User receiver = userService.findUserById(transaction.receiverId());
 
-        //authorizeTransaction
+        //authorizeTransaction//
 
         BigDecimal transactionAmount = transaction.value();
         userService.validateTransaction(sender, transactionAmount);
 
-        Transaction newtransaction = new Transaction();
-        newtransaction.setAmount(transactionAmount);
-        newtransaction.setSender(sender);
-        newtransaction.setReceiver(receiver);
-        newtransaction.setTimestamp(LocalDateTime.now());
+        Transaction newTransaction = createNewTransaction(sender, receiver, transactionAmount);
 
-        sender.debitBalance(transactionAmount);
-        receiver.creditBalance(transactionAmount);
+        updateBalances(sender, receiver, transactionAmount);
 
-        repository.save(newtransaction);
-        userService.save(sender);
-        userService.save(receiver);
+        saveTransactionAndUsers(newTransaction, sender, receiver);
 
+        notifyUsers(sender, receiver);
+
+        return newTransaction;
+    }
+
+    private void notifyUsers(User sender, User receiver) throws Exception {
         notificationService.sendNotification(sender, "Transação realizada com sucesso!");
         notificationService.sendNotification(receiver, "Transação recebida com sucesso!");
+    }
 
-        return newtransaction;
+    private static void updateBalances(User sender, User receiver, BigDecimal transactionAmount) {
+        sender.debitBalance(transactionAmount);
+        receiver.creditBalance(transactionAmount);
+    }
+
+    private Transaction createNewTransaction(User sender, User receiver, BigDecimal amount) {
+        Transaction transaction = new Transaction();
+        transaction.setAmount(amount);
+        transaction.setSender(sender);
+        transaction.setReceiver(receiver);
+        transaction.setTimestamp(LocalDateTime.now());
+        return transaction;
     }
 
     public boolean authorizeTransaction(User sender, BigDecimal value){
@@ -62,6 +73,12 @@ public class TransactionService {
             return "Autorizado".equalsIgnoreCase(message);
         }else return false;
 
+    }
+
+    private void saveTransactionAndUsers(Transaction transaction, User sender, User receiver) {
+        repository.save(transaction);
+        userService.save(sender);
+        userService.save(receiver);
     }
 
 }
