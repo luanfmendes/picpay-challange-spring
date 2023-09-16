@@ -1,5 +1,6 @@
 package br.com.challenge.picpay.domain.user;
 
+import br.com.challenge.picpay.domain.transaction.Transaction;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -28,4 +29,12 @@ public class User {
     private BigDecimal balance;
     @Enumerated(EnumType.STRING)
     private UserType userType;
+
+    public void debitBalance(BigDecimal transactionAmount) {
+        balance = balance.subtract(transactionAmount);
+    }
+    public void creditBalance(BigDecimal transactionAmount) {
+        balance = balance.add(transactionAmount);
+    }
+
 }

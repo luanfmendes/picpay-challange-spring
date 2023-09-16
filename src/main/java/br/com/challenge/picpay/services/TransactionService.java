@@ -5,11 +5,15 @@ import br.com.challenge.picpay.domain.user.User;
 import br.com.challenge.picpay.dtos.TransactionDTO;
 import br.com.challenge.picpay.repositories.TransactionRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.Map;
+
 @Service
 public class TransactionService {
     @Autowired
@@ -21,9 +25,11 @@ public class TransactionService {
     @Autowired
     private NotificationService notificationService;
 
-    public Transaction createTransaction(TransactionDTO transaction) throws Exception{
-        User sender = this.userService.findUserById(transaction.senderId());
-        User receiver = this.userService.findUserById(transaction.receiverId());
+    public Transaction createTransaction(TransactionDTO transaction) throws Exception {
+        User sender = userService.findUserById(transaction.senderId());
+        User receiver = userService.findUserById(transaction.receiverId());
+
+        //authorizeTransaction
 
         BigDecimal transactionAmount = transaction.value();
         userService.validateTransaction(sender, transactionAmount);
@@ -34,17 +40,28 @@ public class TransactionService {
         newtransaction.setReceiver(receiver);
         newtransaction.setTimestamp(LocalDateTime.now());
 
-        sender.setBalance(sender.getBalance().subtract(transaction.value()));
-        receiver.setBalance(receiver.getBalance().add(transaction.value()));
+        sender.debitBalance(transactionAmount);
+        receiver.creditBalance(transactionAmount);
 
-        this.repository.save(newtransaction);
-        this.userService.save(sender);
-        this.userService.save(receiver);
+        repository.save(newtransaction);
+        userService.save(sender);
+        userService.save(receiver);
 
-        this.notificationService.sendNotification(sender, "transação realizada com sucesso!");
-        this.notificationService.sendNotification(receiver, "transação recebida com sucesso!");
+        notificationService.sendNotification(sender, "Transação realizada com sucesso!");
+        notificationService.sendNotification(receiver, "Transação recebida com sucesso!");
 
         return newtransaction;
+    }
+
+    public boolean authorizeTransaction(User sender, BigDecimal value){
+        ResponseEntity<Map> authorizationResponse =
+                restTemplate.getForEntity("https://run.mocky.io/v3/8fafdd68-a090-496f-8c9a-3442cf30dae6", Map.class);
+
+        if(authorizationResponse.getStatusCode() == HttpStatus.OK){
+            String message = (String) authorizationResponse.getBody().get("message");
+            return "Autorizado".equalsIgnoreCase(message);
+        }else return false;
 
     }
+
 }
