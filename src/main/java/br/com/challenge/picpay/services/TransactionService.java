@@ -32,7 +32,7 @@ public class TransactionService {
         //authorizeTransaction//
 
         BigDecimal transactionAmount = transaction.value();
-        userService.validateTransaction(sender, transactionAmount);
+        userService.validateTransactionAuthorization(sender, transactionAmount);
 
         Transaction newTransaction = createNewTransaction(sender, receiver, transactionAmount);
 

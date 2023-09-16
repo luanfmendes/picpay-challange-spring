@@ -3,6 +3,8 @@ package br.com.challenge.picpay.services;
 import br.com.challenge.picpay.domain.user.User;
 import br.com.challenge.picpay.domain.user.UserType;
 import br.com.challenge.picpay.dtos.UserDTO;
+import br.com.challenge.picpay.exceptions.TransactionAuthorizationException;
+import br.com.challenge.picpay.exceptions.UserNotFoundException;
 import br.com.challenge.picpay.repositories.UserRepository;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,20 +22,21 @@ public class UserService {
         BeanUtils.copyProperties(userDTO, user);
         return repository.save(user);
     }
-    public User findUserById(Long id) throws Exception {
-        return this.repository.findUserById(id).orElseThrow(() -> new Exception("usuário não encontrado"));
+    public User findUserById(Long id) throws UserNotFoundException {
+        return repository.findUserById(id).orElseThrow(() -> new UserNotFoundException("Usuário não encontrado"));
     }
+
     public List<User> getAllUsers(){
         return this.repository.findAll();
     }
 
-    public void validateTransaction(User sender, BigDecimal amount) throws Exception {
-        if(sender.getUserType() == UserType.MERCHANT){
-            throw new Exception("Usuário do tipo lojista não está autorizado a realizar transação");
+    public void validateTransactionAuthorization(User sender, BigDecimal amount) throws TransactionAuthorizationException {
+        if (sender.getUserType() == UserType.MERCHANT) {
+            throw new TransactionAuthorizationException("Usuário do tipo lojista não está autorizado a realizar transação");
         }
 
-        if(sender.getBalance().compareTo(amount) < 0){
-            throw new Exception("Saldo insuficiente");
+        if (sender.getBalance().compareTo(amount) < 0) {
+            throw new TransactionAuthorizationException("Saldo insuficiente");
         }
     }
 
